@@ -5,20 +5,27 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export default function Home() {
   const [apiKey, setApiKey] = useState("AIzaSyAvKMsnYrNka5yajnIJU38VYGWncUellKA");
-  const [modelName, setModelName] = useState("gemini-1.5-flash");
-  const [context, setContext] = useState("Premium commercial. Tone is polished, persuasive, and inviting.");
+  const [modelName, setModelName] = useState("gemini-3.1-flash-tts-preview");
+  const [context, setContext] = useState("Premium commercial. Tone is polished, persuasive, and inviting. Comportate como un guia turístico que lleva a un grupo y que cobrará en función de como entusiasme al grupo, asi que intenta envaucarlos en cada parada.");
   const [scene, setScene] = useState("The Sound Stage Booth.");
   const [speaker, setSpeaker] = useState("Orus (Firm, Lower middle pitch).");
   
-  const [fragments, setFragments] = useState([{ id: Date.now(), text: "", resultUrl: "", loading: false, error: "" }]);
+  const [fragments, setFragments] = useState([{ id: Date.now(), name: "Fragmento 1", text: "", resultUrl: "", loading: false, error: "" }]);
 
   const handleAddFragment = () => {
-    setFragments([...fragments, { id: Date.now(), text: "", resultUrl: "", loading: false, error: "" }]);
+    const nextNum = fragments.length + 1;
+    setFragments([...fragments, { id: Date.now(), name: `Fragmento ${nextNum}`, text: "", resultUrl: "", loading: false, error: "" }]);
   };
 
   const handleUpdateText = (index: number, text: string) => {
     const newFragments = [...fragments];
     newFragments[index].text = text;
+    setFragments(newFragments);
+  };
+
+  const handleUpdateName = (index: number, name: string) => {
+    const newFragments = [...fragments];
+    newFragments[index].name = name;
     setFragments(newFragments);
   };
   
@@ -81,34 +88,38 @@ export default function Home() {
     setFragments(newFragments);
 
     try {
-      // Usamos el modelo de preview TTS solicitado originalmente
-      const modelId = "gemini-3.1-flash-tts-preview";
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${apiKey}`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
       
+      const payload: any = {
+        contents: [{ 
+          role: "user", 
+          parts: [{ 
+            text: `Scene: ${scene} Context: ${context} Speaker: ${speaker}\n\nTexto a convertir: ${fragment.text}` 
+          }] 
+        }],
+        generationConfig: {
+          response_modalities: ["AUDIO"],
+          temperature: 1.0
+        }
+      };
+
+      // Solo añadir speech_config si parece ser un modelo TTS específico
+      if (modelName.includes("tts")) {
+        payload.generationConfig.speech_config = {
+          voice_config: {
+            prebuilt_voice_config: {
+              voice_name: speaker.split(' ')[0]
+            }
+          }
+        };
+      }
+
       const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          contents: [{ 
-            role: "user", 
-            parts: [{ 
-              text: `Scene: ${scene} Context: ${context} Speaker: ${speaker}\n\nTexto a convertir: ${fragment.text}` 
-            }] 
-          }],
-          generationConfig: {
-            response_modalities: ["AUDIO"],
-            temperature: 1.0,
-            speech_config: {
-              voice_config: {
-                prebuilt_voice_config: {
-                  voice_name: speaker.split(' ')[0]
-                }
-              }
-            }
-          }
-        })
+        body: JSON.stringify(payload)
       });
 
       if (!response.ok) {
@@ -119,10 +130,22 @@ export default function Home() {
       const data = await response.json();
       console.log("Respuesta de Gemini:", data);
       
+      if (!data.candidates || data.candidates.length === 0) {
+        if (data.promptFeedback?.blockReason) {
+          throw new Error(`La petición fue bloqueada: ${data.promptFeedback.blockReason}`);
+        }
+        throw new Error("El modelo no generó ninguna respuesta (candidates vacíos).");
+      }
+
+      const candidate = data.candidates[0];
+      if (candidate.finishReason && candidate.finishReason !== "STOP") {
+        throw new Error(`La generación terminó de forma inesperada: ${candidate.finishReason}`);
+      }
+
       let base64Audio = "";
       let mimeType = "";
       
-      const parts = data.candidates?.[0]?.content?.parts || [];
+      const parts = candidate.content?.parts || [];
       for (const part of parts) {
         if (part.inlineData && part.inlineData.data) {
           base64Audio = part.inlineData.data;
@@ -149,7 +172,7 @@ export default function Home() {
           return updated;
         });
       } else {
-        throw new Error("El modelo no devolvió audio en la respuesta. Revisa la consola.");
+        throw new Error("La respuesta no contiene datos de audio. Verifica el texto o la configuración.");
       }
 
     } catch (err: any) {
@@ -182,7 +205,7 @@ export default function Home() {
         
         <header className="border-b border-neutral-800 pb-6">
           <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">
-            🎙️ Gemini Text-to-Speech (TTS)
+            🚀 GENERADOR TTS v2
           </h1>
           <p className="text-neutral-400 mt-2">Generador de audio con Next.js + Tailwind</p>
         </header>
@@ -207,12 +230,15 @@ export default function Home() {
 
               <div>
                 <label className="block text-sm font-medium text-neutral-400 mb-1">Modelo</label>
-                <input 
-                  type="text" 
+                <select 
                   value={modelName}
                   onChange={(e) => setModelName(e.target.value)}
-                  className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-4 py-2 focus:outline-none focus:border-blue-500 transition-colors"
-                />
+                  className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-4 py-2 focus:outline-none focus:border-blue-500 transition-colors text-white"
+                >
+                  <option value="gemini-3.1-flash-tts-preview">Gemini 3.1 Flash TTS (Preview)</option>
+                  <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash (Experimental)</option>
+                  <option value="gemini-1.5-flash">Gemini 1.5 Flash (Estable)</option>
+                </select>
               </div>
 
               <div>
@@ -263,7 +289,16 @@ export default function Home() {
               {fragments.map((fragment, index) => (
                 <div key={fragment.id} className="bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden transition-all hover:border-neutral-700">
                   <div className="bg-neutral-950/50 px-4 py-3 border-b border-neutral-800 flex justify-between items-center">
-                    <span className="font-medium text-neutral-300">Fragmento {index + 1}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-neutral-500 font-mono text-sm">{index + 1}.</span>
+                      <input
+                        type="text"
+                        value={fragment.name}
+                        onChange={(e) => handleUpdateName(index, e.target.value)}
+                        className="bg-transparent border-none focus:ring-0 text-neutral-300 font-medium p-0 w-48 hover:bg-white/5 rounded px-2 transition-colors"
+                        placeholder="Nombre del fragmento"
+                      />
+                    </div>
                     {fragments.length > 1 && (
                       <button 
                         onClick={() => handleRemoveFragment(index)}
@@ -306,9 +341,9 @@ export default function Home() {
                           <audio controls src={fragment.resultUrl} className="h-10 w-full max-w-[300px]" />
                           <a 
                             href={fragment.resultUrl} 
-                            download={`fragmento_${index + 1}.mp3`}
+                            download={`${fragment.name || `fragmento_${index + 1}`}.wav`}
                             className="bg-emerald-600 hover:bg-emerald-500 text-white p-2 rounded-lg transition-colors flex-shrink-0"
-                            title="Descargar MP3"
+                            title="Descargar WAV"
                           >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                           </a>
