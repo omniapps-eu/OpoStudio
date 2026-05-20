@@ -2,8 +2,8 @@
 
 import dynamic from "next/dynamic";
 
-const TtsApp = dynamic(() => import("./TtsApp"), { ssr: false });
+const TemaAClaseApp = dynamic(() => import("./tema-a-clase/TemaAClaseApp"), { ssr: false });
 
 export default function Home() {
-  return <TtsApp />;
+  return <TemaAClaseApp />;
 }
