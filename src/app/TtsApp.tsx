@@ -194,7 +194,7 @@ export default function TtsApp() {
     }
     const encoder = new lamejs.Mp3Encoder(1, sampleRate, kbps);
     const blockSize = 1152;
-    const mp3Chunks: Uint8Array[] = [];
+    const mp3Chunks: any[] = [];
     for (let i = 0; i < samples.length; i += blockSize) {
       const chunk = samples.subarray(i, i + blockSize);
       const mp3buf = encoder.encodeBuffer(chunk);
