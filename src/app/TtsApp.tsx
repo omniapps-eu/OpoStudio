@@ -5,7 +5,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import lamejs from "@breezystack/lamejs";
 
 export default function TtsApp() {
-  const [apiKey, setApiKey] = useState("AIzaSyAvKMsnYrNka5yajnIJU38VYGWncUellKA");
+  const [apiKey, setApiKey] = useState("");
   const [modelName, setModelName] = useState("gemini-3.1-flash-tts-preview");
   const [context, setContext] = useState("HABLA CON ACENTO CASTELLANO DE ESPAÑA. Premium commercial. Tone is polished, persuasive, and inviting. Comportate como un guia turístico que lleva a un grupo y que cobrará en función de como entusiasme al grupo, asi que intenta envaucarlos en cada parada.");
   const [scene, setScene] = useState("The Sound Stage Booth.");
@@ -206,11 +206,6 @@ export default function TtsApp() {
   };
 
   const handleGenerate = async (index: number) => {
-    if (!apiKey) {
-      alert("Por favor introduce una API Key");
-      return;
-    }
-
     const fragment = fragments[index];
     if (!fragment.text.trim()) {
       alert("Por favor introduce texto");
@@ -225,7 +220,6 @@ export default function TtsApp() {
     });
 
     try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
       
       // Dividimos el texto en párrafos para evitar el fade-out del modelo
       const chunks = fragment.text.split('\n').filter(p => p.trim().length > 0);
@@ -258,10 +252,14 @@ export default function TtsApp() {
           };
         }
 
-        const response = await fetch(url, {
+        const response = await fetch('/api/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
+          body: JSON.stringify({
+            modelName,
+            payload,
+            apiKey: apiKey || undefined
+          })
         });
 
         if (!response.ok) {
@@ -381,7 +379,8 @@ export default function TtsApp() {
                   type="password" 
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
-                  className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-4 py-2 focus:outline-none focus:border-blue-500 transition-colors"
+                  placeholder="Por defecto se usa la clave del servidor..."
+                  className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-4 py-2 focus:outline-none focus:border-blue-500 transition-colors placeholder-neutral-600"
                 />
               </div>
 
