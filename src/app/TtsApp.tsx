@@ -23,6 +23,10 @@ export default function TtsApp() {
 
   const [saveStatus, setSaveStatus] = useState<"idle" | "saved">("idle");
 
+  // Collapsible sections
+  const [openPresentacion, setOpenPresentacion] = useState(true);
+  const [openVoz, setOpenVoz] = useState(false);
+
   // Cargar configuración guardada al iniciar
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -355,101 +359,136 @@ export default function TtsApp() {
   };
 
   return (
-    <main className="min-h-screen bg-neutral-950 text-neutral-100 p-8 font-sans">
-      <div className="max-w-5xl mx-auto space-y-8">
+    <main className="min-h-screen bg-[#f4f3ef] text-[#2d2b2a] p-8 font-sans">
+      <div className="max-w-[96%] xl:max-w-[1600px] mx-auto space-y-8">
         
-        <header className="border-b border-neutral-800 pb-6">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">
-            🚀 GENERADOR TTS v2
+        <header className="border-b border-[#e8e7e0] pb-6">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-violet-600 to-blue-600 bg-clip-text text-transparent">
+            🚀 OpoStudio · Voz
           </h1>
-          <p className="text-neutral-400 mt-2">Generador de audio con Next.js + Tailwind</p>
+          <p className="text-[#6e6b64] font-medium mt-2">Generador de audio con Next.js + Tailwind</p>
         </header>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* Configuración */}
-          <div className="md:col-span-1 space-y-6 bg-neutral-900 p-6 rounded-xl border border-neutral-800 h-fit">
-            <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+          <div className="lg:col-span-5 space-y-6 bg-[#f9f8f5] p-6 rounded-xl border border-[#e8e7e0] shadow-sm h-fit">
+            <h2 className="text-xl font-bold text-[#2d2b2a] flex items-center gap-2">
               <span className="text-xl">⚙️</span> Configuración
             </h2>
             
             <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-neutral-400 mb-1">Google API Key</label>
-                <input 
-                  type="password" 
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="Por defecto se usa la clave del servidor..."
-                  className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-4 py-2 focus:outline-none focus:border-blue-500 transition-colors placeholder-neutral-600"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-neutral-400 mb-1">Modelo</label>
-                <select 
-                  value={modelName}
-                  onChange={(e) => setModelName(e.target.value)}
-                  className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-4 py-2 focus:outline-none focus:border-blue-500 transition-colors text-white"
+              {/* Sección 1: Presentación */}
+              <div className="bg-white border border-[#e8e7e0] rounded-xl overflow-hidden shadow-sm transition-all duration-300">
+                <button
+                  type="button"
+                  onClick={() => setOpenPresentacion(!openPresentacion)}
+                  className="w-full px-5 py-4 flex items-center justify-between bg-[#fcfbfa] hover:bg-[#f6f5f2] border-b border-[#e8e7e0] transition-colors"
                 >
-                  <option value="gemini-3.1-flash-tts-preview">Gemini 3.1 Flash TTS (Preview)</option>
-                  <option value="gemini-2.5-flash-preview-tts">Gemini 2.5 Flash TTS (Preview)</option>
-                  <option value="gemini-2.5-pro-preview-tts">Gemini 2.5 Pro TTS (Preview)</option>
-                </select>
+                  <span className="font-bold text-sm text-[#2d2b2a] flex items-center gap-2">
+                    <span>📊</span> Presentación
+                  </span>
+                  <span className="text-xs text-[#6e6b64] font-bold">
+                    {openPresentacion ? "Ocultar ▲" : "Mostrar ▼"}
+                  </span>
+                </button>
+                {openPresentacion && (
+                  <div className="p-4 space-y-4 bg-white animate-fadeIn">
+                    <div>
+                      <label className="block text-xs font-bold text-[#5c5952] uppercase tracking-wider mb-1.5">
+                        Modelo de Voz
+                      </label>
+                      <select 
+                        value={modelName}
+                        onChange={(e) => setModelName(e.target.value)}
+                        className="w-full bg-white border border-[#d5d3c9] text-[#2d2b2a] rounded-lg px-4 py-2 focus:outline-none focus:border-violet-500 transition-colors text-sm"
+                      >
+                        <option value="gemini-3.1-flash-tts-preview">Gemini 3.1 Flash TTS (Preview)</option>
+                        <option value="gemini-2.5-flash-preview-tts">Gemini 2.5 Flash TTS (Preview)</option>
+                        <option value="gemini-2.5-pro-preview-tts">Gemini 2.5 Pro TTS (Preview)</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-neutral-400 mb-1">Contexto (Sample Context)</label>
-                <textarea 
-                  value={context}
-                  onChange={(e) => setContext(e.target.value)}
-                  className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-4 py-2 focus:outline-none focus:border-blue-500 transition-colors h-24 resize-none"
-                />
-              </div>
+              {/* Sección 2: Generador de voz */}
+              <div className="bg-white border border-[#e8e7e0] rounded-xl overflow-hidden shadow-sm transition-all duration-300">
+                <button
+                  type="button"
+                  onClick={() => setOpenVoz(!openVoz)}
+                  className="w-full px-5 py-4 flex items-center justify-between bg-[#fcfbfa] hover:bg-[#f6f5f2] border-b border-[#e8e7e0] transition-colors"
+                >
+                  <span className="font-bold text-sm text-[#2d2b2a] flex items-center gap-2">
+                    <span>🎙️</span> Generador de voz
+                  </span>
+                  <span className="text-xs text-[#6e6b64] font-bold">
+                    {openVoz ? "Ocultar ▲" : "Mostrar ▼"}
+                  </span>
+                </button>
+                {openVoz && (
+                  <div className="p-4 space-y-4 bg-white animate-fadeIn">
+                    <div>
+                      <label className="block text-xs font-bold text-[#5c5952] uppercase tracking-wider mb-1.5">
+                        Voz (Speaker)
+                      </label>
+                      <input 
+                        type="text" 
+                        value={speaker}
+                        onChange={(e) => setSpeaker(e.target.value)}
+                        className="w-full bg-white border border-[#d5d3c9] text-[#2d2b2a] rounded-lg px-4 py-2 focus:outline-none focus:border-violet-500 transition-colors text-sm"
+                      />
+                    </div>
 
-              <div>
-                <label className="block text-sm font-medium text-neutral-400 mb-1">Escena (Scene)</label>
-                <textarea 
-                  value={scene}
-                  onChange={(e) => setScene(e.target.value)}
-                  className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-4 py-2 focus:outline-none focus:border-blue-500 transition-colors h-24 resize-none"
-                />
-              </div>
+                    <div>
+                      <label className="block text-xs font-bold text-[#5c5952] uppercase tracking-wider mb-1.5">
+                        Contexto (Sample Context)
+                      </label>
+                      <textarea 
+                        value={context}
+                        onChange={(e) => setContext(e.target.value)}
+                        className="w-full bg-white border border-[#d5d3c9] text-[#2d2b2a] rounded-lg px-4 py-2 focus:outline-none focus:border-violet-500 transition-colors h-20 resize-none text-sm"
+                      />
+                    </div>
 
-              <div>
-                <label className="block text-sm font-medium text-neutral-400 mb-1">Voz (Speaker)</label>
-                <input 
-                  type="text" 
-                  value={speaker}
-                  onChange={(e) => setSpeaker(e.target.value)}
-                  className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-4 py-2 focus:outline-none focus:border-blue-500 transition-colors"
-                />
+                    <div>
+                      <label className="block text-xs font-bold text-[#5c5952] uppercase tracking-wider mb-1.5">
+                        Escena (Scene)
+                      </label>
+                      <textarea 
+                        value={scene}
+                        onChange={(e) => setScene(e.target.value)}
+                        className="w-full bg-white border border-[#d5d3c9] text-[#2d2b2a] rounded-lg px-4 py-2 focus:outline-none focus:border-violet-500 transition-colors h-20 resize-none text-sm"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="pt-2">
                 <button
                   onClick={handleSaveConfig}
-                  className={`w-full py-2.5 px-4 rounded-lg font-medium transition-all duration-300 flex items-center justify-center gap-2 shadow-lg ${
+                  className={`w-full py-2.5 px-4 rounded-lg font-semibold transition-all duration-300 flex items-center justify-center gap-2 ${
                     saveStatus === "saved"
-                      ? "bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/20 scale-[1.02]"
-                      : "bg-blue-600 hover:bg-blue-500 text-white shadow-blue-500/20"
+                      ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-500/10"
+                      : "bg-violet-600 hover:bg-violet-700 text-white shadow-md shadow-violet-500/10"
                   }`}
                 >
-                  {saveStatus === "saved" ? "✅ ¡Configuración Guardada!" : "💾 Guardar Configuración"}
+                  {saveStatus === "saved" ? "✅ ¡Guardado!" : "💾 Guardar config"}
                 </button>
               </div>
             </div>
           </div>
 
           {/* Fragmentos */}
-          <div className="md:col-span-2 space-y-6">
+          <div className="lg:col-span-7 space-y-6">
 
             {/* Importador de visita guiada */}
-            <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5 space-y-4">
-              <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+            <div className="bg-[#f9f8f5] border border-[#e8e7e0] rounded-xl p-5 shadow-sm space-y-4">
+              <h2 className="text-xl font-bold text-[#2d2b2a] flex items-center gap-2">
                 <span className="text-xl">🗺️</span> Importar visita guiada
               </h2>
-              <p className="text-sm text-neutral-400">
-                Arrastra un archivo <code className="text-neutral-300">.txt</code> o pega el texto. Separa cada parada con una línea horizontal (<code className="text-neutral-300">===</code> o <code className="text-neutral-300">---</code>). La primera línea de cada parada se usará como título del fragmento.
+              <p className="text-sm text-[#6e6b64] font-medium">
+                Arrastra un archivo <code className="text-[#2d2b2a] font-semibold">.txt</code> o pega el texto. Separa cada parada con una línea horizontal (<code className="text-[#2d2b2a] font-semibold">===</code> o <code className="text-[#2d2b2a] font-semibold">---</code>). La primera línea de cada parada se usará como título del fragmento.
               </p>
 
               <div
@@ -458,10 +497,10 @@ export default function TtsApp() {
                 onDrop={handleDrop}
                 onClick={() => fileInputRef.current?.click()}
                 className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
-                  isDragging ? "border-blue-500 bg-blue-500/10" : "border-neutral-700 hover:border-neutral-500"
+                  isDragging ? "border-violet-600 bg-violet-50" : "border-[#d5d3c9] hover:border-neutral-400 bg-white"
                 }`}
               >
-                <p className="text-neutral-400">📂 Arrastra aquí un .txt o haz click para seleccionar</p>
+                <p className="text-[#6e6b64] font-medium">📂 Arrastra aquí un .txt o haz click para seleccionar</p>
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -475,43 +514,43 @@ export default function TtsApp() {
                 placeholder="...o pega aquí el texto de la visita"
                 value={importText}
                 onChange={(e) => ingestImportText(e.target.value)}
-                className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-4 py-3 focus:outline-none focus:border-blue-500 transition-colors h-32 resize-y text-sm"
+                className="w-full bg-white border border-[#d5d3c9] text-[#2d2b2a] rounded-lg px-4 py-3 focus:outline-none focus:border-violet-500 transition-colors h-32 resize-y text-sm shadow-inner"
               />
 
               {detectedStops && (
-                <div className="bg-neutral-950/50 border border-neutral-800 rounded-lg p-4 space-y-3">
+                <div className="bg-white border border-[#e8e7e0] rounded-lg p-4 space-y-3 shadow-inner">
                   <div className="flex items-center gap-3 flex-wrap">
-                    <span className="text-neutral-300">
-                      Paradas detectadas: <strong className="text-emerald-400">{detectedStops.length}</strong>
+                    <span className="text-[#2d2b2a] text-sm">
+                      Paradas detectadas: <strong className="text-emerald-700">{detectedStops.length}</strong>
                     </span>
-                    <label className="text-sm text-neutral-400 flex items-center gap-2">
+                    <label className="text-sm text-[#6e6b64] flex items-center gap-2 font-medium">
                       ¿Cuántas paradas tiene?
                       <input
                         type="number"
                         min={1}
                         value={confirmedCount}
                         onChange={(e) => setConfirmedCount(e.target.value === "" ? "" : Math.max(1, parseInt(e.target.value) || 1))}
-                        className="w-20 bg-neutral-950 border border-neutral-800 rounded px-2 py-1 text-white"
+                        className="w-20 bg-white border border-[#d5d3c9] rounded px-2 py-1 text-[#2d2b2a]"
                       />
                     </label>
                   </div>
                   {detectedStops.length > 0 && (
-                    <ul className="text-xs text-neutral-500 list-decimal list-inside space-y-1 max-h-32 overflow-auto">
+                    <ul className="text-xs text-[#6e6b64] list-decimal list-inside space-y-1 max-h-32 overflow-auto font-mono">
                       {detectedStops.map((s, i) => (
-                        <li key={i}><span className="text-neutral-300">{s.title || `(sin título)`}</span></li>
+                        <li key={i}><span className="text-[#2d2b2a] font-sans font-semibold">{s.title || `(sin título)`}</span></li>
                       ))}
                     </ul>
                   )}
                   <div className="flex gap-2 flex-wrap">
                     <button
                       onClick={handleApplyStops}
-                      className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                      className="bg-[#2d2b2a] hover:bg-black text-white px-4 py-2 rounded-lg font-semibold text-sm shadow-md transition-colors"
                     >
                       ✅ Crear fragmentos
                     </button>
                     <button
                       onClick={() => ingestImportText(importText)}
-                      className="bg-neutral-700 hover:bg-neutral-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                      className="bg-neutral-200 hover:bg-neutral-300 text-neutral-700 border border-[#d5d3c9] px-4 py-2 rounded-lg font-semibold text-sm transition-colors"
                       title="Volver a analizar el texto actual"
                     >
                       🔄 Redetectar paradas
@@ -521,31 +560,31 @@ export default function TtsApp() {
               )}
             </div>
 
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <h2 className="text-xl font-semibold text-white flex items-center gap-2">
-                <span className="text-xl">📝</span> Fragmentos de Texto
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <h2 className="text-xl font-bold text-[#2d2b2a] flex items-center gap-2">
+                <span>📝</span> Fragmentos de Texto
               </h2>
               <div className="flex gap-2 flex-wrap">
                 <button
                   onClick={handleClearAll}
-                  className="bg-red-700 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                  className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-semibold text-sm shadow-md shadow-red-500/10 transition-colors"
                 >
                   🗑️ Borrar todo
                 </button>
                 <button
                   onClick={handleGenerateBatch}
                   disabled={batchRunning}
-                  className={`px-4 py-2 rounded-lg font-medium transition-colors shadow-lg ${
+                  className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors shadow-md ${
                     batchRunning
-                      ? "bg-neutral-800 text-neutral-500 cursor-not-allowed"
-                      : "bg-purple-600 hover:bg-purple-500 text-white shadow-purple-500/20"
+                      ? "bg-neutral-200 text-neutral-400 cursor-not-allowed"
+                      : "bg-purple-600 hover:bg-purple-700 text-white shadow-purple-500/10"
                   }`}
                 >
                   {batchRunning ? "⏳ Generando (2x)..." : "🎙️ Generar visita (de 2 en 2)"}
                 </button>
                 <button
                   onClick={handleGenerateAll}
-                  className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-lg font-medium transition-colors shadow-lg shadow-blue-500/20"
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold text-sm transition-colors shadow-md shadow-blue-500/10"
                 >
                   🚀 Generar Todo
                 </button>
@@ -554,26 +593,48 @@ export default function TtsApp() {
 
             <div className="space-y-6">
               {fragments.map((fragment, index) => (
-                <div key={fragment.id} className="bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden transition-all hover:border-neutral-700">
-                  <div className="bg-neutral-950/50 px-4 py-3 border-b border-neutral-800 flex justify-between items-center gap-3">
+                <div
+                  key={fragment.id}
+                  className={`bg-[#f9f8f5] border rounded-xl overflow-hidden transition-all shadow-sm ${
+                    fragment.resultUrl
+                      ? "border-emerald-600/30 bg-emerald-50/10"
+                      : fragment.error
+                      ? "border-red-600/30 bg-red-50/10"
+                      : "border-[#e8e7e0] hover:border-neutral-300"
+                  }`}
+                >
+                  <div className="bg-white px-4 py-3 border-b border-[#e8e7e0] flex justify-between items-center gap-3">
                     <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <span className="text-neutral-500 font-mono text-sm flex-shrink-0">{index + 1}.</span>
+                      <span className="text-[#6e6b64] font-mono text-sm font-semibold flex-shrink-0">{index + 1}.</span>
                       <input
                         type="text"
                         value={fragment.name}
                         onChange={(e) => handleUpdateName(index, e.target.value)}
-                        className="bg-transparent border-none focus:ring-0 text-neutral-300 font-medium p-0 flex-1 min-w-0 hover:bg-white/5 rounded px-2 transition-colors"
+                        className="bg-transparent border-none focus:ring-0 text-[#2d2b2a] font-bold p-0 flex-1 min-w-0 hover:bg-black/5 rounded px-2 transition-colors text-sm"
                         placeholder="Nombre del fragmento"
                       />
                     </div>
-                    {fragments.length > 1 && (
-                      <button 
-                        onClick={() => handleRemoveFragment(index)}
-                        className="text-red-400 hover:text-red-300 text-sm transition-colors"
-                      >
-                        Eliminar
-                      </button>
-                    )}
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs flex-shrink-0">
+                        {fragment.resultUrl ? (
+                          <span className="text-emerald-700 font-semibold">✅ listo</span>
+                        ) : fragment.loading ? (
+                          <span className="text-amber-700 animate-pulse font-semibold">⏳ generando…</span>
+                        ) : fragment.error ? (
+                          <span className="text-red-700 font-semibold">⚠️ error</span>
+                        ) : (
+                          <span className="text-[#a8a59a]">— pendiente</span>
+                        )}
+                      </span>
+                      {fragments.length > 1 && (
+                        <button 
+                          onClick={() => handleRemoveFragment(index)}
+                          className="text-red-600 hover:text-red-700 text-sm font-semibold transition-colors"
+                        >
+                          Eliminar
+                        </button>
+                      )}
+                    </div>
                   </div>
                   
                   <div className="p-4 space-y-4">
@@ -581,35 +642,35 @@ export default function TtsApp() {
                       placeholder="Pega tu texto aquí..."
                       value={fragment.text}
                       onChange={(e) => handleUpdateText(index, e.target.value)}
-                      className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-4 py-3 focus:outline-none focus:border-blue-500 transition-colors h-32 resize-y"
+                      className="w-full bg-white border border-[#d5d3c9] text-[#2d2b2a] rounded-lg px-4 py-3 focus:outline-none focus:border-violet-500 transition-colors h-32 resize-y text-sm shadow-inner"
                     />
 
                     <div className="flex flex-col sm:flex-row items-center gap-4">
                       <button 
                         onClick={() => handleGenerate(index)}
                         disabled={fragment.loading || !fragment.text.trim()}
-                        className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${
+                        className={`px-4 py-2 rounded-lg font-semibold transition-colors whitespace-nowrap text-sm ${
                           fragment.loading 
-                            ? "bg-neutral-800 text-neutral-500 cursor-not-allowed" 
-                            : "bg-neutral-800 hover:bg-neutral-700 text-white"
+                            ? "bg-neutral-200 text-neutral-400 cursor-not-allowed" 
+                            : "bg-neutral-200 hover:bg-neutral-300 text-neutral-700 border border-[#d5d3c9]"
                         }`}
                       >
-                        {fragment.loading ? "⏳ Generando..." : "▶️ Generar Audio"}
+                        {fragment.loading ? "⏳ Generando..." : fragment.resultUrl ? "🔄 Regenerar" : "▶️ Generar Audio"}
                       </button>
 
                       {fragment.error && (
-                        <span className="text-red-400 text-sm truncate" title={fragment.error}>
+                        <span className="text-red-700 font-semibold text-sm truncate flex-1" title={fragment.error}>
                           ⚠️ {fragment.error}
                         </span>
                       )}
 
                       {fragment.resultUrl && (
                         <div className="flex-1 flex items-center justify-end gap-3 w-full">
-                          <audio controls src={fragment.resultUrl} className="h-10 w-full max-w-[300px]" />
+                          <audio controls src={fragment.resultUrl} className="h-9 w-full max-w-[300px]" />
                           <a 
                             href={fragment.resultUrl} 
                             download={`${fragment.name || `fragmento_${index + 1}`}.mp3`}
-                            className="bg-emerald-600 hover:bg-emerald-500 text-white p-2 rounded-lg transition-colors flex-shrink-0"
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white p-2 rounded-lg transition-all flex-shrink-0 shadow-md shadow-emerald-500/10"
                             title="Descargar MP3"
                           >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
@@ -624,7 +685,7 @@ export default function TtsApp() {
 
             <button 
               onClick={handleAddFragment}
-              className="w-full py-4 border-2 border-dashed border-neutral-800 hover:border-neutral-600 text-neutral-400 hover:text-neutral-300 rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
+              className="w-full py-4 border-2 border-dashed border-[#d5d3c9] hover:border-neutral-400 bg-white text-[#6e6b64] hover:text-[#2d2b2a] rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-2 shadow-sm"
             >
               <span className="text-xl">+</span> Añadir otra ventana
             </button>
