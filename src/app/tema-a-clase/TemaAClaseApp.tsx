@@ -568,13 +568,16 @@ export default function TemaAClaseApp() {
   return (
     <main className="min-h-screen bg-[#f4f3ef] text-[#2d2b2a] p-8 font-sans">
       <div className="max-w-[96%] xl:max-w-[1600px] mx-auto space-y-8">
-        <header className="border-b border-[#e8e7e0] pb-6">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-violet-600 to-blue-600 bg-clip-text text-transparent">
-            📚 OpoStudio
-          </h1>
-          <p className="text-[#6e6b64] font-medium mt-2">
-            Generador de Material Didáctico con Audio a partir de PDF
-          </p>
+        <header className="border-b border-[#e8e7e0] pb-6 flex items-center gap-4">
+          <img src="/logo.png" alt="OpoStudio Logo" className="w-14 h-14 object-contain rounded-xl shadow-sm border border-[#e8e7e0]/50" />
+          <div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-violet-600 to-blue-600 bg-clip-text text-transparent">
+              OpoStudio
+            </h1>
+            <p className="text-[#6e6b64] font-medium mt-1">
+              Generador de Material Didáctico con Audio a partir de PDF
+            </p>
+          </div>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
