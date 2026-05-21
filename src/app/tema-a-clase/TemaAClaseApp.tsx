@@ -37,6 +37,7 @@ export default function TemaAClaseApp() {
   const [openPresentacion, setOpenPresentacion] = useState(true);
   const [openVoz, setOpenVoz] = useState(false);
   const [openInstrucciones, setOpenInstrucciones] = useState(false);
+  const [openApi, setOpenApi] = useState(false);
 
   // PDF
   const [pdfFile, setPdfFile] = useState<File | null>(null);
@@ -260,6 +261,80 @@ export default function TemaAClaseApp() {
     }
   };
 
+  // Utility to wait for a certain duration
+  const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  // Fetch proxy API with automatic Exponential Backoff and Jitter
+  const fetchWithRetry = async (
+    url: string,
+    options: RequestInit,
+    maxRetries = 3,
+    baseDelayMs = 1500
+  ): Promise<Response> => {
+    let attempt = 0;
+    while (true) {
+      try {
+        const response = await fetch(url, options);
+
+        // Retry on rate limit (429) or transient server errors (5xx)
+        if (response.status === 429 || (response.status >= 500 && response.status < 600)) {
+          if (attempt >= maxRetries) {
+            console.warn(`[TTS Retry] Límite de reintentos (${maxRetries}) alcanzado. Código de respuesta: ${response.status}`);
+            return response;
+          }
+          attempt++;
+          // Exponential backoff: baseDelay * 2^(attempt - 1) + random jitter of 0-500ms
+          const delay = baseDelayMs * Math.pow(2, attempt - 1) + Math.random() * 500;
+          console.warn(
+            `[TTS Retry] Petición fallida con estado ${response.status}. Reintento ${attempt}/${maxRetries} en ${Math.round(delay)}ms...`
+          );
+          await sleep(delay);
+          continue;
+        }
+
+        return response;
+      } catch (err) {
+        if (attempt >= maxRetries) {
+          console.error(`[TTS Retry] Error de red persistente tras ${maxRetries} intentos:`, err);
+          throw err;
+        }
+        attempt++;
+        const delay = baseDelayMs * Math.pow(2, attempt - 1) + Math.random() * 500;
+        console.warn(
+          `[TTS Retry] Error de red. Reintento ${attempt}/${maxRetries} en ${Math.round(delay)}ms...`,
+          err
+        );
+        await sleep(delay);
+      }
+    }
+  };
+
+  // Smart character-based batching utility for TTS text
+  const chunkTextByLength = (text: string, maxLength = 1500): string[] => {
+    const lines = text.split("\n");
+    const chunks: string[] = [];
+    let currentChunk = "";
+
+    for (const line of lines) {
+      const trimmedLine = line.trim();
+      if (!trimmedLine) continue;
+
+      // If adding this line exceeds maxLength, push the current chunk and start a new one
+      if (currentChunk && currentChunk.length + trimmedLine.length + 1 > maxLength) {
+        chunks.push(currentChunk);
+        currentChunk = trimmedLine;
+      } else {
+        currentChunk = currentChunk ? currentChunk + "\n" + trimmedLine : trimmedLine;
+      }
+    }
+
+    if (currentChunk) {
+      chunks.push(currentChunk);
+    }
+
+    return chunks;
+  };
+
   // Generate TTS for one fragment
   const handleGenerate = async (index: number) => {
     const fragment = fragments[index];
@@ -272,10 +347,18 @@ export default function TemaAClaseApp() {
     });
 
     try {
-      const chunks = fragment.text.split("\n").filter((p) => p.trim().length > 0);
+      const chunks = chunkTextByLength(fragment.text, 1500);
       let totalRawPCM = "";
 
-      for (const chunkText of chunks) {
+      for (let i = 0; i < chunks.length; i++) {
+        const chunkText = chunks[i];
+
+        // Introduce a 1.2s delay between blocks to respect Google TTS API RPM limits
+        if (i > 0) {
+          console.log(`[TTS Delay] Esperando 1.2s entre bloques del fragmento ${index + 1}...`);
+          await sleep(1200);
+        }
+
         const payload = {
           contents: [
             {
@@ -298,7 +381,7 @@ export default function TemaAClaseApp() {
           },
         };
 
-        const response = await fetch("/api/generate", {
+        const response = await fetchWithRetry("/api/generate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ modelName: ttsModel, payload, apiKey: apiKey || undefined }),
@@ -371,10 +454,20 @@ export default function TemaAClaseApp() {
     setBatchRunning(true);
     const CONCURRENCY = 1;
     let cursor = 0;
+    
     await Promise.all(
       Array.from({ length: Math.min(CONCURRENCY, pending.length) }, async () => {
+        let isFirstInBatch = true;
         while (cursor < pending.length) {
           const idx = pending[cursor++];
+          
+          // Introduce a 1.5s delay between sequential fragments in batch generation
+          if (!isFirstInBatch) {
+            console.log(`[TTS Batch Delay] Esperando 1.5s antes de procesar el siguiente fragmento en lote...`);
+            await sleep(1500);
+          }
+          isFirstInBatch = false;
+
           await handleGenerate(idx).catch(() => {});
         }
       })
@@ -604,6 +697,41 @@ export default function TemaAClaseApp() {
             </h2>
 
             <div className="space-y-4">
+              {/* Sección 0: Clave de API */}
+              <div className="bg-white border border-[#e8e7e0] rounded-xl overflow-hidden shadow-sm transition-all duration-300">
+                <button
+                  type="button"
+                  onClick={() => setOpenApi(!openApi)}
+                  className="w-full px-5 py-4 flex items-center justify-between bg-[#fcfbfa] hover:bg-[#f6f5f2] border-b border-[#e8e7e0] transition-colors"
+                >
+                  <span className="font-bold text-sm text-[#2d2b2a] flex items-center gap-2">
+                    <span>🔑</span> Clave de API (Opcional)
+                  </span>
+                  <span className="text-xs text-[#6e6b64] font-bold">
+                    {openApi ? "Ocultar ▲" : "Mostrar ▼"}
+                  </span>
+                </button>
+                {openApi && (
+                  <div className="p-4 space-y-4 bg-white animate-fadeIn">
+                    <div>
+                      <label className="block text-xs font-bold text-[#5c5952] uppercase tracking-wider mb-1.5">
+                        Clave de API de Google (AI Studio / Cloud)
+                      </label>
+                      <input
+                        type="password"
+                        placeholder="Usando clave por defecto de .env.local"
+                        value={apiKey}
+                        onChange={(e) => setApiKey(e.target.value)}
+                        className="w-full bg-white border border-[#d5d3c9] text-[#2d2b2a] rounded-lg px-4 py-2 focus:outline-none focus:border-violet-500 transition-colors text-sm"
+                      />
+                      <p className="text-[11px] text-[#6e6b64] mt-1.5 leading-relaxed">
+                        Si dejas este campo vacío, la aplicación utilizará automáticamente la clave de entorno <code className="font-mono text-[#2d2b2a] font-bold">.env.local</code>.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Sección 1: Presentación */}
               <div className="bg-white border border-[#e8e7e0] rounded-xl overflow-hidden shadow-sm transition-all duration-300">
                 <button
