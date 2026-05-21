@@ -107,12 +107,13 @@ Grid de 4 bloques:
 
 Al final del slide resumen: reproductor MP3 del cierre del tema.
 
-### 4.6 Reglas de contenido CRÍTICAS
+### 4.6 Reglas de contenido CRÍTICAS de la presentación
 
-1. Presta atención a las palabra en negrita, son importantes, y pónmelas en negrita en la presentación. 
-2. NO saltarse ningún párrafo del PDF, aunque parezca menor. Todo puede ser pregunta de test.
-3. Nivel técnico-administrativo A1.1100: terminología jurídico-administrativa correcta.
-4. Mnemotecnia activa: cuando el contenido sea difícil de memorizar, proporcionar siempre un acrónimo, frase o regla concreta.
+1. NO TE INVENTES NADA. Usa sólo el texto del PDF. 
+2. Presta atención a las palabra en negrita, son importantes, y pónmelas en negrita en la presentación. 
+3. NO saltarse ningún párrafo del PDF, aunque parezca menor. Todo puede ser pregunta de test.
+4. Nivel técnico-administrativo A1.1100: terminología jurídico-administrativa correcta.
+5. Mnemotecnia activa: cuando el contenido sea difícil de memorizar, proporcionar siempre un acrónimo, frase o regla concreta.
 
 
 ### 4.7 Impresión

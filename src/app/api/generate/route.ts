@@ -26,11 +26,21 @@ export async function POST(request: Request) {
       body: JSON.stringify(payload)
     });
     
-    const data = await response.json();
+    const text = await response.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = { 
+        error: { 
+          message: `Respuesta no válida de Google API (Status ${response.status}): ${text.slice(0, 150) || "Cuerpo vacío"}` 
+        } 
+      };
+    }
     return NextResponse.json(data, { status: response.status });
   } catch (error: any) {
     return NextResponse.json(
-      { error: { message: error.message || "Error interno en el proxy del servidor." } }, 
+      { error: { message: error.message || "Error de red en el proxy del servidor." } }, 
       { status: 500 }
     );
   }

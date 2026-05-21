@@ -216,7 +216,7 @@ export default function TemaAClaseApp() {
     return new Blob(mp3Chunks as unknown as BlobPart[], { type: "audio/mpeg" });
   };
 
-  // Helper to save a single MP3 and update index.html in the linked directory
+  // Helper to save a single MP3, TXT and update index.html in the linked directory
   const autoSaveSingleAudioAndHtml = async (
     dirHandle: FileSystemDirectoryHandle,
     updatedFragments: Fragment[],
@@ -232,6 +232,22 @@ export default function TemaAClaseApp() {
       const mp3Writable = await mp3Handle.createWritable();
       await mp3Writable.write(blob);
       await mp3Writable.close();
+
+      // Write the individual TXT file for this fragment
+      const txtFilename = sanitizeFilename(fragment.name) + ".txt";
+      const txtHandle = await dirHandle.getFileHandle(txtFilename, { create: true });
+      const txtWritable = await txtHandle.createWritable();
+      await txtWritable.write(new Blob([fragment.text], { type: "text/plain;charset=utf-8" }));
+      await txtWritable.close();
+
+      // Re-generate and write the full guion.txt script file
+      const fullTxt = updatedFragments
+        .map((f) => `${f.name}\n${f.text}`)
+        .join("\n\n===================================================\n\n");
+      const combinedTxtHandle = await dirHandle.getFileHandle("guion.txt", { create: true });
+      const combinedTxtWritable = await combinedTxtHandle.createWritable();
+      await combinedTxtWritable.write(new Blob([fullTxt], { type: "text/plain;charset=utf-8" }));
+      await combinedTxtWritable.close();
 
       // Write the updated HTML presentation
       const patchedHtml = patchHtmlSrcs(scriptHtml, updatedFragments);
@@ -381,7 +397,7 @@ export default function TemaAClaseApp() {
     });
   };
 
-  // Helper to save all current assets (HTML + any generated MP3s) to a folder
+  // Helper to save all current assets (HTML + MP3s + TXTs) to a folder
   const autoSaveAllToDirectory = async (dirHandle: FileSystemDirectoryHandle, frags: Fragment[]) => {
     // Write HTML with patched src attributes
     const patchedHtml = patchHtmlSrcs(scriptHtml, frags);
@@ -390,8 +406,24 @@ export default function TemaAClaseApp() {
     await htmlWritable.write(new Blob([patchedHtml], { type: "text/html;charset=utf-8" }));
     await htmlWritable.close();
 
-    // Write each completed MP3
+    // Write combined guion.txt script file
+    const fullTxt = frags
+      .map((f) => `${f.name}\n${f.text}`)
+      .join("\n\n===================================================\n\n");
+    const combinedTxtHandle = await dirHandle.getFileHandle("guion.txt", { create: true });
+    const combinedTxtWritable = await combinedTxtHandle.createWritable();
+    await combinedTxtWritable.write(new Blob([fullTxt], { type: "text/plain;charset=utf-8" }));
+    await combinedTxtWritable.close();
+
+    // Write each completed MP3 and individual TXT
     for (const fragment of frags) {
+      // Write the TXT file regardless of whether MP3 exists
+      const txtFilename = sanitizeFilename(fragment.name) + ".txt";
+      const txtHandle = await dirHandle.getFileHandle(txtFilename, { create: true });
+      const txtWritable = await txtHandle.createWritable();
+      await txtWritable.write(new Blob([fragment.text], { type: "text/plain;charset=utf-8" }));
+      await txtWritable.close();
+
       if (!fragment.resultBlob) continue;
       const filename = sanitizeFilename(fragment.name) + ".mp3";
       const mp3Handle = await dirHandle.getFileHandle(filename, { create: true });
@@ -445,6 +477,87 @@ export default function TemaAClaseApp() {
       const error = err as Error;
       if (error.name !== "AbortError") {
         alert(`Error al guardar: ${error.message}`);
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Helper to fetch a file from FileSystemDirectoryHandle, returns null if not found
+  const getFileOrNull = async (dirHandle: FileSystemDirectoryHandle, filename: string): Promise<File | null> => {
+    try {
+      const handle = await dirHandle.getFileHandle(filename);
+      return await handle.getFile();
+    } catch {
+      return null;
+    }
+  };
+
+  // Recover state from a previously saved local directory
+  const handleRecoverFromDirectory = async () => {
+    setSaving(true);
+    try {
+      const win = window as unknown as WindowWithDirectoryPicker;
+      if (!win.showDirectoryPicker) {
+        throw new Error("Su navegador no soporta la API de Acceso al Sistema de Archivos.");
+      }
+      const dirHandle = await win.showDirectoryPicker({ mode: "readwrite" });
+
+      const guionFile = await getFileOrNull(dirHandle, "guion.txt");
+      if (!guionFile) {
+        throw new Error("No se encontró el archivo 'guion.txt' en la carpeta seleccionada. Asegúrese de elegir una carpeta válida de una generación anterior.");
+      }
+
+      const txtContent = await guionFile.text();
+      const stops = parseStops(txtContent);
+      if (stops.length === 0) {
+        throw new Error("El archivo 'guion.txt' está vacío o no tiene un formato válido.");
+      }
+
+      const htmlFile = await getFileOrNull(dirHandle, "index.html");
+      if (htmlFile) {
+        const htmlContent = await htmlFile.text();
+        setScriptHtml(htmlContent);
+      }
+
+      const now = Date.now();
+      const loadedFragments: Fragment[] = [];
+      let audiosLoaded = 0;
+
+      for (let i = 0; i < stops.length; i++) {
+        const s = stops[i];
+        const mp3Filename = sanitizeFilename(s.title) + ".mp3";
+        const mp3File = await getFileOrNull(dirHandle, mp3Filename);
+
+        let resultBlob: Blob | null = null;
+        let resultUrl = "";
+        if (mp3File) {
+          resultBlob = mp3File;
+          resultUrl = URL.createObjectURL(mp3File);
+          audiosLoaded++;
+        }
+
+        loadedFragments.push({
+          id: now + i,
+          name: s.title,
+          text: s.body,
+          resultUrl,
+          resultBlob,
+          loading: false,
+          error: "",
+        });
+      }
+
+      setFragments(loadedFragments);
+      setDirectoryHandle(dirHandle);
+      setStep("editing");
+      setSavedOk(true);
+
+      alert(`🎉 ¡Progreso recuperado con éxito!\nSe cargaron ${audiosLoaded} audios de ${loadedFragments.length} epígrafes desde la carpeta.`);
+    } catch (err: unknown) {
+      const error = err as Error;
+      if (error.name !== "AbortError") {
+        alert(`Error al recuperar progreso: ${error.message}`);
       }
     } finally {
       setSaving(false);
@@ -683,17 +796,30 @@ export default function TemaAClaseApp() {
               )}
 
               {step === "config" && (
-                <button
-                  onClick={handleGenerateScript}
-                  disabled={!pdfFile}
-                  className={`w-full py-3 px-6 rounded-lg font-semibold transition-colors ${
-                    pdfFile
-                      ? "bg-violet-600 hover:bg-violet-700 text-white shadow-md shadow-violet-500/10"
-                      : "bg-neutral-200 text-neutral-400 cursor-not-allowed"
-                  }`}
-                >
-                  ✨ Generar guion y presentación con Gemini
-                </button>
+                <div className="space-y-3">
+                  <button
+                    onClick={handleGenerateScript}
+                    disabled={!pdfFile}
+                    className={`w-full py-3 px-6 rounded-lg font-semibold transition-colors ${
+                      pdfFile
+                        ? "bg-violet-600 hover:bg-violet-700 text-white shadow-md shadow-violet-500/10"
+                        : "bg-neutral-200 text-neutral-400 cursor-not-allowed"
+                    }`}
+                  >
+                    ✨ Generar guion y presentación con Gemini
+                  </button>
+                  <div className="relative flex py-1 items-center">
+                    <div className="flex-grow border-t border-[#e8e7e0]"></div>
+                    <span className="flex-shrink mx-4 text-[#6e6b64] text-xs font-bold uppercase tracking-wider">O también</span>
+                    <div className="flex-grow border-t border-[#e8e7e0]"></div>
+                  </div>
+                  <button
+                    onClick={handleRecoverFromDirectory}
+                    className="w-full py-2.5 px-6 rounded-lg font-bold text-sm transition-colors bg-white hover:bg-neutral-50 text-neutral-700 border border-[#d5d3c9] shadow-sm flex items-center justify-center gap-2"
+                  >
+                    📂 Recuperar progreso desde carpeta
+                  </button>
+                </div>
               )}
 
               {step === "editing" && (
