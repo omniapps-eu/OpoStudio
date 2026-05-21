@@ -360,7 +360,7 @@ export default function TemaAClaseApp() {
     }
   };
 
-  // Batch TTS 2-in-2
+  // Batch TTS 1-by-1
   const handleGenerateBatch = async () => {
     if (batchRunning) return;
     const pending = fragments
@@ -369,7 +369,7 @@ export default function TemaAClaseApp() {
     if (pending.length === 0) return;
 
     setBatchRunning(true);
-    const CONCURRENCY = 2;
+    const CONCURRENCY = 1;
     let cursor = 0;
     await Promise.all(
       Array.from({ length: Math.min(CONCURRENCY, pending.length) }, async () => {
@@ -883,7 +883,7 @@ export default function TemaAClaseApp() {
                       }`}
                     >
                       {batchRunning
-                        ? "⏳ Generando (2x2)..."
+                        ? "⏳ Generando (1 a 1)..."
                         : `🎙️ Generar audio (${pendingCount} pendientes)`}
                     </button>
                     <button
