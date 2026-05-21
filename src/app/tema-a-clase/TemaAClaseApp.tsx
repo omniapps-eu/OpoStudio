@@ -2,6 +2,11 @@
 
 import { useState, useRef, useEffect } from "react";
 import lamejs from "@breezystack/lamejs";
+import { DEFAULT_SYSTEM_PROMPT } from "./prompt";
+
+interface WindowWithDirectoryPicker extends Window {
+  showDirectoryPicker?: (options?: { mode?: "read" | "readwrite" }) => Promise<FileSystemDirectoryHandle>;
+}
 
 type Fragment = {
   id: number;
@@ -15,231 +20,14 @@ type Fragment = {
 
 type Step = "config" | "generating" | "editing";
 
-const DEFAULT_SYSTEM_PROMPT = `# ESPECIFICACIONES DEL AGENTE — APP GENERADORA DE MATERIAL DE ESTUDIO
-## Oposición A1.1100 · Cuerpo General Administrativo · Junta de Andalucía
-
----
-
-## 1. CONTEXTO Y ROL DEL AGENTE
-
-El agente actúa como **preparador experto de oposiciones** al Cuerpo General Administrativo A1.1100 de la Junta de Andalucía.
-
-**Objetivo principal:** que el alumno entienda Y memorice los temas usando todas las técnicas pedagógicas disponibles.
-
-**Técnicas pedagógicas obligatorias:**
-- Analogías y metáforas
-- Historias y anécdotas reales o verosímiles
-- Humor cuando sea apropiado
-- Ejemplos de la vida cotidiana
-- Repetición espaciada de conceptos clave
-- Conexiones explícitas entre temas del mismo bloque
-- Contraste entre conceptos similares que se confunden frecuentemente
-- Reglas mnemotécnicas (acrónimos, rimas, frases clave)
-- Cualquier recurso que facilite el aprendizaje y la retención a largo plazo
-
-**Nivel de la explicación:** técnico-administrativo apropiado para A1.1100. No simplificar en exceso ni elevar innecesariamente.
-
----
-
-## 2. INPUT DEL SISTEMA
-
-- **Entrada:** PDF del tema de la oposición (apuntes VJL ©)
-- **No se requiere** transcripción de vídeo ni material adicional externo
-- El agente genera TODO el contenido a partir del PDF
-
----
-
-## 3. OUTPUT: DOS ARCHIVOS POR TEMA
-
-### Archivo 1 — Presentación HTML
-Nombre sugerido: Tema XX - [Título] - Presentación CON AUDIO.html
-
-### Archivo 2 — Guiones de audio TXT
-Nombre sugerido: Tema XX - [Título] - Guiones Audio TTS.txt
-
----
-
-## 4. ESPECIFICACIONES DEL HTML
-
-### 4.1 Codificación (OBLIGATORIO)
-Siempre incluir ambas líneas:
-<meta charset="UTF-8">
-<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-
-### 4.2 Estructura de páginas
-PORTADA → SLIDE EPÍGRAFE 1 → SLIDE EPÍGRAFE 2 → ... → SLIDE RESUMEN FINAL
-
-### 4.3 PORTADA
-- Kicker: "Cuerpo General Administrativo · A1.1100 · Junta de Andalucía"
-- Título: "Tema XX"
-- Subtítulo: título completo del tema
-- Índice visual: grid con un item por epígrafe (número + título corto)
-- Aviso: caja amarilla con las leyes/artículos clave del tema
-- Pie: "Preparación basada en apuntes VJL © · Versión [fecha]"
-- Reproductor MP3 de la introducción al final de la portada
-
-### 4.4 SLIDES DE EPÍGRAFE
-
-Cada slide contiene:
-
-#### Header
-- Badge azul con número de epígrafe
-- Título del epígrafe
-- Subtítulo con sub-apartados y artículos clave
-
-#### Cuerpo visual — usar el componente más apropiado:
-| Tipo de contenido | Componente |
-|---|---|
-| Conceptos a comparar | Tabla comparativa (2 columnas coloreadas) |
-| Características de algo | Grid de cards (2x2, 2x3, 3x2...) |
-| Jerarquías o pirámides | Pirámide de filas coloreadas |
-| Procesos o pasos | Pasos numerados con flechas |
-| Plazos o fechas clave | Cards de tiempo con valor grande destacado |
-| Derechos y obligaciones | Dos columnas coloreadas (verde/rojo) |
-| Listas de bienes o artículos | Cards de lista numerada |
-| Clasificaciones | Árbol o grid de categorías |
-
-#### Badges de alerta (siempre junto al dato)
-- 🟡 TEST — dato que suele preguntarse en tipo test
-- 🔴 TRAMPA — error frecuente o confusión habitual
-- 🟠 OJO — matización importante
-
-#### Cajas mnemotécnicas
-Caja amarilla al final de cada sección compleja:
-- Etiqueta: "🧠 Mnemónico" o "🧠 Truco"
-- Contenido: acrónimo, frase o regla para memorizar
-
-#### Reproductor MP3 al final de cada slide
-- Caja azul claro con borde azul
-- Etiqueta: "▶ EPÍGRAFE X — [TÍTULO]"
-- Elemento <audio controls> con <source src="NOMBRE_EXACTO.mp3">
-- El nombre del archivo MP3 debe coincidir exactamente con el nombre del bloque en el TXT
-
-### 4.5 SLIDE RESUMEN FINAL
-Grid de 4 bloques:
-- ⚠ Datos exactos: Números, fechas, plazos que pueden salir en test
-- ✗ Trampas clásicas: Lista de afirmaciones falsas típicas del test
-- ✓ Artículos clave: Chips con todos los artículos y normas a leer
-- 📝 Estructura desarrollo: Esquema numerado para construir la respuesta escrita
-
-Al final del slide resumen: reproductor MP3 del cierre del tema.
-
-### 4.6 Impresión
-@media print { .audio-box { display: none; } }
-
----
-
-## 5. ESPECIFICACIONES DEL TXT (GUIONES DE AUDIO)
-
-### 5.1 Propósito
-Texto limpio para pasar a motor TTS. Sin HTML, sin Markdown, solo texto plano.
-
-### 5.2 Estructura del archivo
-
-[CABECERA con título del tema, oposición y artículos clave]
-INTRODUCCIÓN AL TEMA
-[texto]
-===================================================
-EPÍGRAFE 1 — [TÍTULO EN MAYÚSCULAS]
-[texto]
-===================================================
-EPÍGRAFE 2 — [TÍTULO EN MAYÚSCULAS]
-[texto]
-===================================================
-[...más epígrafes...]
-===================================================
-CIERRE DEL TEMA
-[texto]
-
-**Regla crítica de separadores:**
-- La línea === SOLO aparece ENTRE epígrafes
-- NUNCA dentro de un epígrafe
-- NUNCA en la cabecera ni en el cierre final
-
-### 5.3 Estructura interna obligatoria por epígrafe
-1. Apertura — contextualización del epígrafe dentro del tema
-2. Desarrollo — explicación de TODOS los apartados del PDF sin saltarse ninguno
-3. Ejemplos y anécdotas — al menos 1-2 por epígrafe
-4. Advertencias de test — señalar explícitamente las trampas frecuentes
-5. Cierre mnemónico — resumir con el truco/acrónimo para memorizar
-
-### 5.4 Reglas de contenido CRÍTICAS
-
-1. NUNCA leer párrafos literales del PDF. Siempre reelaborar con palabras propias.
-2. NO saltarse ningún párrafo del PDF, aunque parezca menor. Todo puede ser pregunta de test.
-3. Tono conversacional de preparador presencial: "Fíjaos bien...", "Y aquí viene la trampa...", "No os la juguéis si no estáis seguros...", "Memorízalo porque sale mucho...", "Os pongo un ejemplo...", "Esto lo recuerdo con el truco..."
-4. Nivel técnico-administrativo A1.1100: terminología jurídico-administrativa correcta.
-5. Duración: la necesaria para explicar bien cada epígrafe, sin límite fijo.
-6. Mnemotecnia activa: cuando el contenido sea difícil de memorizar, proporcionar siempre un acrónimo, frase o regla concreta.
-
----
-
-## 6. NOMENCLATURA DE LOS ARCHIVOS MP3
-
-| Bloque | Nombre MP3 esperado |
-|---|---|
-| Introducción | TEMA XX — [TÍTULO CORTO].mp3 |
-| Epígrafe 1 | EPÍGRAFE 1 — [TÍTULO EN MAYÚSCULAS].mp3 |
-| Epígrafe 2 | EPÍGRAFE 2 — [TÍTULO EN MAYÚSCULAS].mp3 |
-| Epígrafe N | EPÍGRAFE N — [TÍTULO EN MAYÚSCULAS].mp3 |
-| Cierre | CIERRE DEL TEMA.mp3 |
-
-Reglas:
-- Todo en MAYÚSCULAS
-- Los dos puntos (:) se sustituyen por guión bajo (_) en el nombre de archivo
-- Todos los MP3 deben estar en la misma carpeta que el HTML
-
----
-
-## 7. EJEMPLOS DE MNEMÓNICOS (referencia de estilo)
-
-| Contenido | Mnemónico |
-|---|---|
-| 4 caracteres de la propiedad | GIAE = Generalidad · Independencia · Abstracción · Elasticidad |
-| Facultades del propietario | DATER = Disposición · Aprovechamiento · accesión · Exclusión · Reivindicación |
-| Extinción del usufructo | MERRPP = Muerte · Expiración · Reunión · Renuncia · Pérdida · Prescripción |
-| 5 bienes hipoteca mobiliaria | EAAMP = Establecimientos · Automóviles · Aeronaves · Maquinaria · Propiedad int./ind. |
-| 5 asientos del Registro | PIANC = Presentación · Inscripción · Anotación · Nota marginal · Cancelación |
-
----
-
-## 8. TRAMPAS TÍPICAS DE TEST (referencia de estilo)
-
-Identificar y señalar activamente:
-- Cambiar una palabra clave en una definición legal
-- Mezclar conceptos similares (ej: capacidad jurídica vs. capacidad de obrar)
-- Afirmar que algo es obligatorio cuando es voluntario (o viceversa)
-- Decir que algo es derecho fundamental cuando no lo es
-- Confundir el momento en que nace un derecho
-- Alterar los requisitos de una figura
-- Presentar como vigente una regulación ya derogada
-- Confundir plazos
-
----
-
-## 9. CONSIDERACIONES TÉCNICAS ADICIONALES
-
-- El HTML debe poder abrirse directamente en navegador sin servidor
-- Debe poder imprimirse a PDF con Ctrl+P (los reproductores se ocultan en impresión)
-- Diseño con fuente Inter (Google Fonts) o sistema sans-serif como fallback
-- Fondo general: #f4f3ef (tono crema suave)
-- Cards con fondo: #f9f8f5 y borde #e8e7e0
-- Colores de alerta:
-  - TEST: amarillo #fff3cd / #856404
-  - TRAMPA: rojo claro #fde8e8 / #9b1c1c
-  - OJO: naranja #fff7ed / #9a3412
-  - Mnemónico: amarillo intenso #fef9c3 / #854d0e
-- El diseño es responsive y se adapta a impresión en A4`;
-
 export default function TemaAClaseApp() {
   // Config
   const [apiKey, setApiKey] = useState("");
   const [systemPrompt, setSystemPrompt] = useState(DEFAULT_SYSTEM_PROMPT);
-  const [showPrompt, setShowPrompt] = useState(false);
   const [scriptModel, setScriptModel] = useState("gemini-2.5-flash");
   const [ttsModel, setTtsModel] = useState("gemini-2.5-flash-preview-tts");
   const [ttsContext, setTtsContext] = useState(
-    "HABLA CON ACENTO CASTELLANO DE ESPAÑA. Eres un preparador de oposiciones experto, cercano y entusiasta. Tono didáctico y motivador."
+    "HABLA CON ACENTO CASTELLANO DE ESPAÑA. Eres un preparador de oposiciones experto y cercano. Tono didáctico y motivador."
   );
   const [ttsScene, setTtsScene] = useState("The Sound Stage Booth.");
   const [ttsSpeaker, setTtsSpeaker] = useState("Orus");
@@ -264,19 +52,28 @@ export default function TemaAClaseApp() {
   const [saving, setSaving] = useState(false);
   const [savedOk, setSavedOk] = useState(false);
 
+  // Directory selection & real-time auto-saving
+  const [directoryHandle, setDirectoryHandle] = useState<FileSystemDirectoryHandle | null>(null);
+  const directoryHandleRef = useRef<FileSystemDirectoryHandle | null>(null);
+  useEffect(() => {
+    directoryHandleRef.current = directoryHandle;
+  }, [directoryHandle]);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     const saved = localStorage.getItem("tac_config");
     if (!saved) return;
     try {
       const c = JSON.parse(saved);
-      if (c.apiKey !== undefined) setApiKey(c.apiKey);
-      if (c.systemPrompt !== undefined) setSystemPrompt(c.systemPrompt);
-      if (c.scriptModel !== undefined) setScriptModel(c.scriptModel);
-      if (c.ttsModel !== undefined) setTtsModel(c.ttsModel);
-      if (c.ttsContext !== undefined) setTtsContext(c.ttsContext);
-      if (c.ttsScene !== undefined) setTtsScene(c.ttsScene);
-      if (c.ttsSpeaker !== undefined) setTtsSpeaker(c.ttsSpeaker);
+      setTimeout(() => {
+        if (c.apiKey !== undefined) setApiKey(c.apiKey);
+        if (c.systemPrompt !== undefined) setSystemPrompt(c.systemPrompt);
+        if (c.scriptModel !== undefined) setScriptModel(c.scriptModel);
+        if (c.ttsModel !== undefined) setTtsModel(c.ttsModel);
+        if (c.ttsContext !== undefined) setTtsContext(c.ttsContext);
+        if (c.ttsScene !== undefined) setTtsScene(c.ttsScene);
+        if (c.ttsSpeaker !== undefined) setTtsSpeaker(c.ttsSpeaker);
+      }, 0);
     } catch {}
   }, []);
 
@@ -349,8 +146,26 @@ export default function TemaAClaseApp() {
         body: JSON.stringify({ pdfBase64, systemPrompt, model: scriptModel, apiKey: apiKey || undefined }),
       });
 
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error?.message || `Error ${response.status}`);
+      if (!response.ok) {
+        let errorMsg = `Error al generar el guion: ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMsg = errorData.error?.message || errorMsg;
+        } catch {
+          try {
+            const text = await response.text();
+            errorMsg = text.slice(0, 150) || errorMsg;
+          } catch {}
+        }
+        throw new Error(errorMsg);
+      }
+
+      let data: { txt: string; html: string };
+      try {
+        data = await response.json() as { txt: string; html: string };
+      } catch {
+        throw new Error(`La respuesta de /api/tema/script no es un JSON válido (Código ${response.status}).`);
+      }
 
       const { txt, html } = data;
       const stops = parseStops(txt);
@@ -368,8 +183,9 @@ export default function TemaAClaseApp() {
       );
       setScriptHtml(html);
       setStep("editing");
-    } catch (err: any) {
-      setScriptError(err.message || "Error al generar el material.");
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : "Error al generar el material.";
+      setScriptError(errMsg);
       setStep("config");
     }
   };
@@ -385,15 +201,47 @@ export default function TemaAClaseApp() {
     }
     const encoder = new lamejs.Mp3Encoder(1, sampleRate, kbps);
     const blockSize = 1152;
-    const mp3Chunks: any[] = [];
+    const mp3Chunks: Uint8Array[] = [];
     for (let i = 0; i < samples.length; i += blockSize) {
       const chunk = samples.subarray(i, i + blockSize);
       const mp3buf = encoder.encodeBuffer(chunk);
-      if (mp3buf.length > 0) mp3Chunks.push(new Uint8Array(mp3buf));
+      if (mp3buf && (mp3buf as { length: number }).length > 0) {
+        mp3Chunks.push(new Uint8Array(mp3buf as ArrayLike<number>));
+      }
     }
     const end = encoder.flush();
-    if (end.length > 0) mp3Chunks.push(new Uint8Array(end));
-    return new Blob(mp3Chunks, { type: "audio/mpeg" });
+    if (end && (end as { length: number }).length > 0) {
+      mp3Chunks.push(new Uint8Array(end as ArrayLike<number>));
+    }
+    return new Blob(mp3Chunks as unknown as BlobPart[], { type: "audio/mpeg" });
+  };
+
+  // Helper to save a single MP3 and update index.html in the linked directory
+  const autoSaveSingleAudioAndHtml = async (
+    dirHandle: FileSystemDirectoryHandle,
+    updatedFragments: Fragment[],
+    completedIndex: number,
+    blob: Blob
+  ) => {
+    try {
+      const fragment = updatedFragments[completedIndex];
+      const filename = sanitizeFilename(fragment.name) + ".mp3";
+
+      // Write the MP3 file
+      const mp3Handle = await dirHandle.getFileHandle(filename, { create: true });
+      const mp3Writable = await mp3Handle.createWritable();
+      await mp3Writable.write(blob);
+      await mp3Writable.close();
+
+      // Write the updated HTML presentation
+      const patchedHtml = patchHtmlSrcs(scriptHtml, updatedFragments);
+      const htmlHandle = await dirHandle.getFileHandle("index.html", { create: true });
+      const htmlWritable = await htmlHandle.createWritable();
+      await htmlWritable.write(new Blob([patchedHtml], { type: "text/html;charset=utf-8" }));
+      await htmlWritable.close();
+    } catch (err: unknown) {
+      console.error("Error al auto-guardar archivo en la carpeta vinculada:", err);
+    }
   };
 
   // Generate TTS for one fragment
@@ -412,7 +260,7 @@ export default function TemaAClaseApp() {
       let totalRawPCM = "";
 
       for (const chunkText of chunks) {
-        const payload: any = {
+        const payload = {
           contents: [
             {
               role: "user",
@@ -441,11 +289,25 @@ export default function TemaAClaseApp() {
         });
 
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error?.message || `Error: ${response.status}`);
+          let errorMsg = `Error en epígrafe ${index + 1}: ${response.status}`;
+          try {
+            const errorData = await response.json() as { error?: { message?: string } };
+            errorMsg = errorData.error?.message || errorMsg;
+          } catch {
+            try {
+              const text = await response.text();
+              errorMsg = text.slice(0, 150) || errorMsg;
+            } catch {}
+          }
+          throw new Error(errorMsg);
         }
 
-        const data = await response.json();
+        let data: { candidates?: Array<{ content?: { parts?: Array<{ inlineData?: { data?: string } }> } }> };
+        try {
+          data = await response.json() as { candidates?: Array<{ content?: { parts?: Array<{ inlineData?: { data?: string } }> } }> };
+        } catch {
+          throw new Error(`La respuesta de /api/generate no es un JSON válido (Código ${response.status}).`);
+        }
         const parts = data.candidates?.[0]?.content?.parts || [];
         for (const part of parts) {
           if (part.inlineData?.data) {
@@ -465,10 +327,18 @@ export default function TemaAClaseApp() {
         u[index] = { ...u[index], loading: false, resultUrl, resultBlob: mp3Blob };
         return u;
       });
-    } catch (err: any) {
+
+      if (directoryHandleRef.current) {
+        const updatedFragments = fragments.map((f, i) =>
+          i === index ? { ...f, loading: false, resultUrl, resultBlob: mp3Blob } : f
+        );
+        await autoSaveSingleAudioAndHtml(directoryHandleRef.current, updatedFragments, index, mp3Blob);
+      }
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : "Error desconocido.";
       setFragments((prev) => {
         const u = [...prev];
-        u[index] = { ...u[index], loading: false, error: err.message };
+        u[index] = { ...u[index], loading: false, error: errMsg };
         return u;
       });
     }
@@ -511,37 +381,70 @@ export default function TemaAClaseApp() {
     });
   };
 
-  // Save files to user-selected folder (File System Access API)
-  const handleSaveToFolder = async () => {
-    if (!allHaveAudio) {
-      alert("Genera todos los audios antes de guardar.");
-      return;
+  // Helper to save all current assets (HTML + any generated MP3s) to a folder
+  const autoSaveAllToDirectory = async (dirHandle: FileSystemDirectoryHandle, frags: Fragment[]) => {
+    // Write HTML with patched src attributes
+    const patchedHtml = patchHtmlSrcs(scriptHtml, frags);
+    const htmlHandle = await dirHandle.getFileHandle("index.html", { create: true });
+    const htmlWritable = await htmlHandle.createWritable();
+    await htmlWritable.write(new Blob([patchedHtml], { type: "text/html;charset=utf-8" }));
+    await htmlWritable.close();
+
+    // Write each completed MP3
+    for (const fragment of frags) {
+      if (!fragment.resultBlob) continue;
+      const filename = sanitizeFilename(fragment.name) + ".mp3";
+      const mp3Handle = await dirHandle.getFileHandle(filename, { create: true });
+      const mp3Writable = await mp3Handle.createWritable();
+      await mp3Writable.write(fragment.resultBlob);
+      await mp3Writable.close();
     }
+  };
+
+  // Choose a local directory using the File System Access API and save initial files
+  const handleChooseDirectory = async () => {
     setSaving(true);
     try {
-      const dirHandle = await (window as any).showDirectoryPicker({ mode: "readwrite" });
+      const win = window as unknown as WindowWithDirectoryPicker;
+      if (!win.showDirectoryPicker) {
+        throw new Error("Su navegador no soporta la API de Acceso al Sistema de Archivos.");
+      }
+      const dirHandle = await win.showDirectoryPicker({ mode: "readwrite" });
+      setDirectoryHandle(dirHandle);
 
-      // Write HTML with patched src attributes
-      const patchedHtml = patchHtmlSrcs(scriptHtml, fragments);
-      const htmlHandle = await dirHandle.getFileHandle("index.html", { create: true });
-      const htmlWritable = await htmlHandle.createWritable();
-      await htmlWritable.write(new Blob([patchedHtml], { type: "text/html;charset=utf-8" }));
-      await htmlWritable.close();
+      // Save everything we have so far
+      await autoSaveAllToDirectory(dirHandle, fragments);
+      setSavedOk(true);
+    } catch (err: unknown) {
+      const error = err as Error;
+      if (error.name !== "AbortError") {
+        alert(`Error al vincular carpeta: ${error.message}`);
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
 
-      // Write each MP3
-      for (const fragment of fragments) {
-        if (!fragment.resultBlob) continue;
-        const filename = sanitizeFilename(fragment.name) + ".mp3";
-        const mp3Handle = await dirHandle.getFileHandle(filename, { create: true });
-        const mp3Writable = await mp3Handle.createWritable();
-        await mp3Writable.write(fragment.resultBlob);
-        await mp3Writable.close();
+  // Save files to linked folder or prompt user if not linked
+  const handleSaveToFolder = async () => {
+    setSaving(true);
+    try {
+      let dirHandle = directoryHandle;
+      if (!dirHandle) {
+        const win = window as unknown as WindowWithDirectoryPicker;
+        if (!win.showDirectoryPicker) {
+          throw new Error("Su navegador no soporta la API de Acceso al Sistema de Archivos.");
+        }
+        dirHandle = await win.showDirectoryPicker({ mode: "readwrite" });
+        setDirectoryHandle(dirHandle);
       }
 
+      await autoSaveAllToDirectory(dirHandle, fragments);
       setSavedOk(true);
-    } catch (err: any) {
-      if (err.name !== "AbortError") {
-        alert(`Error al guardar: ${err.message}`);
+    } catch (err: unknown) {
+      const error = err as Error;
+      if (error.name !== "AbortError") {
+        alert(`Error al guardar: ${error.message}`);
       }
     } finally {
       setSaving(false);
@@ -859,19 +762,22 @@ export default function TemaAClaseApp() {
                     </button>
                     <button
                       onClick={handleSaveToFolder}
-                      disabled={!allHaveAudio || saving}
-                      title={!allHaveAudio ? "Genera todos los audios primero" : ""}
-                      className={`px-4 py-2 rounded-lg font-semibold transition-colors text-sm ${
-                        allHaveAudio && !saving
+                      disabled={saving}
+                      className={`px-4 py-2 rounded-lg font-semibold transition-all duration-300 text-sm cursor-pointer ${
+                        saving
+                          ? "bg-neutral-200 text-neutral-400 cursor-not-allowed"
+                          : directoryHandle
+                          ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-500/10 animate-pulse-subtle"
+                          : allHaveAudio
                           ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-500/10"
-                          : "bg-neutral-200 text-neutral-400 cursor-not-allowed"
+                          : "bg-neutral-200 hover:bg-neutral-300 text-neutral-700 border border-[#d5d3c9]"
                       }`}
                     >
                       {saving
                         ? "💾 Guardando..."
-                        : savedOk
-                        ? "✅ ¡Guardado! (guardar de nuevo)"
-                        : "📁 Seleccionar carpeta y guardar"}
+                        : directoryHandle
+                        ? "💾 Sincronizar carpeta"
+                        : "📁 Guardar en carpeta (manual)"}
                     </button>
                   </div>
                 </div>
@@ -883,6 +789,45 @@ export default function TemaAClaseApp() {
                       className="bg-emerald-600 h-2 rounded-full transition-all duration-500"
                       style={{ width: `${(doneCount / fragments.length) * 100}%` }}
                     />
+                  </div>
+                )}
+
+                {/* Directory linking banner */}
+                {!directoryHandle ? (
+                  <div className="bg-amber-50 border border-amber-200/80 rounded-xl p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4 shadow-sm transition-all duration-300 animate-fadeIn">
+                    <div className="space-y-1">
+                      <p className="text-amber-800 font-bold flex items-center gap-2 text-sm">
+                        <span>⚠️</span> Guardado automático no configurado
+                      </p>
+                      <p className="text-[#6e6b64] text-xs leading-relaxed">
+                        Vincula una carpeta local para guardar el archivo <code className="font-mono bg-black/5 px-1 rounded font-semibold text-neutral-800 text-[11px]">index.html</code> y cada audio MP3 de forma automática a medida que se completen. ¡Evita perder tu progreso!
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleChooseDirectory}
+                      disabled={saving}
+                      className="px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg transition-all duration-300 flex items-center gap-2 shadow-md shadow-amber-600/10 hover:shadow-amber-600/20 active:scale-95 self-start md:self-auto shrink-0 cursor-pointer"
+                    >
+                      <span>📁</span> Vincular Carpeta de Destino
+                    </button>
+                  </div>
+                ) : (
+                  <div className="bg-emerald-50 border border-emerald-200/80 rounded-xl p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4 shadow-sm transition-all duration-300 animate-fadeIn">
+                    <div className="space-y-1">
+                      <p className="text-emerald-800 font-bold flex items-center gap-2 text-sm">
+                        <span>✅</span> Guardado automático activado
+                      </p>
+                      <p className="text-[#6e6b64] text-xs">
+                        Carpeta vinculada: <span className="font-bold text-[#2d2b2a] bg-black/5 px-1.5 py-0.5 rounded font-mono text-[11px]">{directoryHandle.name}</span>. Todos los archivos se guardan allí en tiempo real.
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleChooseDirectory}
+                      disabled={saving}
+                      className="px-3.5 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-xs font-bold rounded-lg transition-colors border border-emerald-200 shrink-0 self-start md:self-auto cursor-pointer"
+                    >
+                      Cambiar carpeta
+                    </button>
                   </div>
                 )}
 

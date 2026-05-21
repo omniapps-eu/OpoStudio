@@ -267,11 +267,25 @@ export default function TtsApp() {
         });
 
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error?.message || `Error en chunk ${i + 1}: ${response.status}`);
+          let errorMsg = `Error en chunk ${i + 1}: ${response.status}`;
+          try {
+            const errorData = await response.json();
+            errorMsg = errorData.error?.message || errorMsg;
+          } catch (_) {
+            try {
+              const text = await response.text();
+              errorMsg = text.slice(0, 150) || errorMsg;
+            } catch (_) {}
+          }
+          throw new Error(errorMsg);
         }
 
-        const data = await response.json();
+        let data;
+        try {
+          data = await response.json();
+        } catch (e: any) {
+          throw new Error(`La respuesta de /api/generate no es un JSON válido (Código ${response.status}).`);
+        }
         const candidate = data.candidates?.[0];
         
         if (candidate?.finishReason && candidate.finishReason !== "STOP") {

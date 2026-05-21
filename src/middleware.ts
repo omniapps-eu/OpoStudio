@@ -34,7 +34,7 @@ export function middleware(req: NextRequest) {
   })
 }
 
-// Configuración para que el middleware se ejecute en todas las rutas excepto archivos estáticos y favicon
+// Configuración para que el middleware se ejecute en todas las rutas excepto la API, archivos estáticos y favicon
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
 }
