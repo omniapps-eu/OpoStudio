@@ -50,6 +50,7 @@ export default function TemaAClaseApp() {
   const [scriptHtml, setScriptHtml] = useState("");
   const [fragments, setFragments] = useState<Fragment[]>([]);
   const [batchRunning, setBatchRunning] = useState(false);
+  const [batchCountdown, setBatchCountdown] = useState<number>(0);
   const [saving, setSaving] = useState(false);
   const [savedOk, setSavedOk] = useState(false);
 
@@ -264,6 +265,17 @@ export default function TemaAClaseApp() {
   // Utility to wait for a certain duration
   const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+  // Wait for a duration while updating a countdown in seconds
+  const sleepWithCountdown = async (ms: number) => {
+    let remaining = Math.ceil(ms / 1000);
+    setBatchCountdown(remaining);
+    while (remaining > 0) {
+      await sleep(1000);
+      remaining--;
+      setBatchCountdown(remaining);
+    }
+  };
+
   // Fetch proxy API with automatic Exponential Backoff and Jitter
   const fetchWithRetry = async (
     url: string,
@@ -452,27 +464,32 @@ export default function TemaAClaseApp() {
     if (pending.length === 0) return;
 
     setBatchRunning(true);
+    setBatchCountdown(0);
     const CONCURRENCY = 1;
     let cursor = 0;
     
-    await Promise.all(
-      Array.from({ length: Math.min(CONCURRENCY, pending.length) }, async () => {
-        let isFirstInBatch = true;
-        while (cursor < pending.length) {
-          const idx = pending[cursor++];
-          
-          // Introduce a 1.5s delay between sequential fragments in batch generation
-          if (!isFirstInBatch) {
-            console.log(`[TTS Batch Delay] Esperando 1.5s antes de procesar el siguiente fragmento en lote...`);
-            await sleep(1500);
-          }
-          isFirstInBatch = false;
+    try {
+      await Promise.all(
+        Array.from({ length: Math.min(CONCURRENCY, pending.length) }, async () => {
+          let isFirstInBatch = true;
+          while (cursor < pending.length) {
+            const idx = pending[cursor++];
+            
+            // Introduce a 3 minutes delay between sequential fragments in batch generation
+            if (!isFirstInBatch) {
+              console.log(`[TTS Batch Delay] Esperando 3 minutos antes de procesar el siguiente fragmento en lote...`);
+              await sleepWithCountdown(180000);
+            }
+            isFirstInBatch = false;
 
-          await handleGenerate(idx).catch(() => {});
-        }
-      })
-    );
-    setBatchRunning(false);
+            await handleGenerate(idx).catch(() => {});
+          }
+        })
+      );
+    } finally {
+      setBatchRunning(false);
+      setBatchCountdown(0);
+    }
   };
 
   // Sanitize filename for Windows (no colons, no special chars)
@@ -1011,7 +1028,9 @@ export default function TemaAClaseApp() {
                       }`}
                     >
                       {batchRunning
-                        ? "⏳ Generando (1 a 1)..."
+                        ? batchCountdown > 0
+                          ? `⏳ Próximo en ${Math.floor(batchCountdown / 60)}m ${batchCountdown % 60}s...`
+                          : "⏳ Generando (1 a 1)..."
                         : `🎙️ Generar audio (${pendingCount} pendientes)`}
                     </button>
                     <button
