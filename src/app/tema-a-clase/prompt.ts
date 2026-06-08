@@ -92,7 +92,8 @@ Caja amarilla al final de cada sección compleja:
 - Etiqueta: "🧠 Mnemónico" o "🧠 Truco"
 - Contenido: acrónimo, frase o regla para memorizar
 
-#### Reproductor MP3 al final de cada slide
+#### Reproductor MP3 en cada slide
+- Colocar el reproductor visualmente por encima del título del epígrafe o del contenido del slide (o asegurar mediante CSS con un diseño flexbox vertical ordenado o posicionamiento con z-index y márgenes limpios que el reproductor de audio quede siempre visible por encima de los textos y que nunca pueda ser solapado ni tapado si el título del capítulo o epígrafe es demasiado largo).
 - Caja azul claro con borde azul
 - Etiqueta: "▶ EPÍGRAFE X — [TÍTULO]"
 - Elemento <audio controls> con <source src="NOMBRE_EXACTO.mp3">

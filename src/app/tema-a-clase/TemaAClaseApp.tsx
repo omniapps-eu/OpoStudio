@@ -492,9 +492,11 @@ export default function TemaAClaseApp() {
     }
   };
 
-  // Sanitize filename for Windows (no colons, no special chars)
-  const sanitizeFilename = (name: string) =>
-    name.replace(/:/g, "_").replace(/[<>"|?*\\/]/g, "_").trim();
+  // Sanitize filename for Windows (no colons, no special chars) and limit length
+  const sanitizeFilename = (name: string) => {
+    const clean = name.replace(/:/g, "_").replace(/[<>"|?*\\/]/g, "_").trim();
+    return clean.length > 60 ? clean.substring(0, 60).trim().replace(/[._\-\s]+$/, "") : clean;
+  };
 
   // Patch all <source src="...mp3"> in the HTML with actual sanitized filenames, in order
   const patchHtmlSrcs = (html: string, frags: Fragment[]): string => {
